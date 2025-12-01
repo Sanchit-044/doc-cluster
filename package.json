@@ -11,10 +11,12 @@
   "description": "",
   "dependencies": {
     "@prisma/client": "^7.0.1",
+    "@types/jsonwebtoken": "^9.0.10",
     "bcrypt": "^6.0.0",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "prisma": "^7.0.1",
+    "redis": "^5.10.0",
     "zod": "^4.1.13"
   },
   "devDependencies": {
