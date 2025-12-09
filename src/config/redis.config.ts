@@ -10,7 +10,15 @@ redisClient.on("error", (err: Error) =>
   console.error("Redis Client Error", err)
 );
 
-await redisClient.connect();
+const connectRedis = async (): Promise<void> => {
+  try {
+    await redisClient.connect();
+  } catch (err) {
+    console.error("Failed to connect to Redis:", err);
+  }
+};
+
+connectRedis();
 
 const checkRedisConnection = async (
   req: Request,
@@ -32,4 +40,4 @@ const checkRedisConnection = async (
   }
 };
 
-export { redisClient, checkRedisConnection };
+export { redisClient, checkRedisConnection, connectRedis };
