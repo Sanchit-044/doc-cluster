@@ -1,18 +1,24 @@
-import { PrismaClient } from "@prisma/client";
-import dotenv from "dotenv";
+import { PrismaClient } from '@prisma/client';
+import {setupOTPCleanup,setupSessionCleanup} from "../utils"
 
-dotenv.config();
+const prisma = new PrismaClient();
 
-export const prisma = new PrismaClient({
-  log: ["query", "info", "warn", "error"]
-});
-
-export const connectDB = async () => {
+/**
+ * Connects to the database and sets up OTP cleanup.
+ * @returns {Promise<void>} A promise that resolves when the connection is established.
+ */
+async function connectDB(): Promise<void> {
   try {
     await prisma.$connect();
-    console.log("Connected to PostgreSQL database");
-  } catch (error) {
-    console.error("Database connection failed:", error);
-    process.exit(1);
+    await Promise.all([
+      setupOTPCleanup(),
+      setupSessionCleanup()
+    ]);
+    console.log("Connected to the database!");
+  } catch (err) {
+    console.error("Connection error", err);
+    throw err;
   }
-};
+}
+
+export { prisma, connectDB };

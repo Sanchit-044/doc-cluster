@@ -4,7 +4,7 @@ dotenv.config();
 import express from 'express';
 import { connectDB } from './config/prisma.config';
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 4000;
 const httpsServer = createServer(app);
 // app.get('/', (req, res) => {
 //     res.send('sever is running');

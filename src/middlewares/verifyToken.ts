@@ -39,3 +39,4 @@ const verifyToken = async (req: CustomRequest, res: Response, next: NextFunction
 }
 
 export default verifyToken;
+export { verifyToken };
