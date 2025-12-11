@@ -1,0 +1,13 @@
+ model Session {
+    id           String   @id @default(uuid())
+    userId       String
+    refreshToken String   // store a hash, not the plaintext token
+    userAgent    String?
+    deviceInfo   String?  // JSON string
+    ip           String?
+    createdAt    DateTime @default(now())
+    expiresAt    DateTime
+ 
+    @@index([userId])
+    @@map("sessions")
+ }
