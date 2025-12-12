@@ -48,7 +48,7 @@ jobs:
 
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            docker-compose pull
-            docker-compose up -d
+            sudo docker-compose pull
+            sudo docker-compose up -d
 
-            docker image prune -f
+            sudo docker image prune -f
