@@ -9,7 +9,7 @@ import { registerOtp } from "../middlewares/otp";
 const router = Router();
 
 
-router.post('/register', validateRequest(registerSchema),registerOtp, registerUser);
+router.post('/register', validateRequest(registerSchema), registerUser);
 router.post('/login', validateRequest(loginSchema), loginUser);
 
 export default router;

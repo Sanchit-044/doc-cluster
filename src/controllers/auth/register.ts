@@ -51,11 +51,12 @@ const registerUser = async (
         email,
         password: hashedPassword,
         username,
-        DOB, // fixed
+        DOB,
+        isVerified:true
       },
     });
 
-    return sendOtpEmail(req, res, next);
+    // return sendOtpEmail(req, res, next);
 
   } catch (error) {
     console.error("REGISTER USER ERROR:", error);
