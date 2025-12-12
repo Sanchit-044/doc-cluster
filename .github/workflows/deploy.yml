@@ -3,7 +3,7 @@ name:  Deploy Service to EC2
 on:
   push:
     branches:
-      - master
+      - auth
 
 jobs:
   build-and-push:
