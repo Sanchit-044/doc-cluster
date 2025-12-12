@@ -1,4 +1,4 @@
-name:  Deploy Service to EC2
+name: Deploy Service to EC2
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: SSH into EC2 and deploy
+      - name: SSH into EC2 and deploy new image
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -46,12 +46,9 @@ jobs:
           script: |
             cd /home/ubuntu/doc-cluster
 
-            git pull origin main
-
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            docker compose pull
-
-            docker compose up -d
+            docker-compose pull
+            docker-compose up -d
 
             docker image prune -f
