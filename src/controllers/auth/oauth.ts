@@ -8,12 +8,20 @@ interface OauthUser {
   tempOAuthToken: string;
 }
 
+//initiate handlers
 const startGoogleOauth = (req: Request, res: Response, next: NextFunction) => {
   passport.authenticate("google", {
     scope: ["profile", "email"],
   })(req, res, next);
 };
 
+const startGithubOauth = (req: Request, res: Response, next: NextFunction) => {
+  passport.authenticate("github", {
+    scope: ["user:email"],
+  })(req, res, next);
+};
+
+//callback handlers
 const googleOauthCallback = (
   req: Request,
   res: Response,
@@ -24,22 +32,19 @@ const googleOauthCallback = (
     { session: false },
     (err: Error | null, user: OauthUser | false) => {
       if (err) {
-        return next(new CustomError("An error occurred", 500, err.message));
+        console.error("Google OAuth callback error:", err);
+        return next(new CustomError("OAuth failed", 500, err.message));
       }
+
       if (!user) {
         return next(new CustomError("User not found", 404));
       }
-      res.redirect(
-        `${process.env.FRONTEND_URL}/google?token=${user.tempOAuthToken}`
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/oauth/callback?provider=google&token=${user.tempOAuthToken}`
       );
     }
   )(req, res, next);
-};
-
-const startGithubOauth = (req: Request, res: Response, next: NextFunction) => {
-  passport.authenticate("github", {
-    scope: ["user:email"],
-  })(req, res, next);
 };
 
 const githubOauthCallback = (
@@ -52,18 +57,22 @@ const githubOauthCallback = (
     { session: false },
     (err: Error | null, user: OauthUser | false) => {
       if (err) {
-        return next(new CustomError("An error occurred", 500, err.message));
+        console.error("GitHub OAuth callback error:", err);
+        return next(new CustomError("OAuth failed", 500, err.message));
       }
+
       if (!user) {
         return next(new CustomError("User not found", 404));
       }
-      res.redirect(
-        `${process.env.FRONTEND_URL}/oauth/callback?token=${user.tempOAuthToken}`
+
+      return res.redirect(
+        `${process.env.FRONTEND_URL}/oauth/callback?provider=github&token=${user.tempOAuthToken}`
       );
     }
   )(req, res, next);
 };
 
+//token generation after oauth
 const generateTokens = async (
   req: Request,
   res: Response,
@@ -71,6 +80,7 @@ const generateTokens = async (
 ) => {
   try {
     const { tempOAuthToken } = req.body;
+
     if (!tempOAuthToken) {
       return next(new CustomError("Invalid token", 400));
     }
@@ -78,15 +88,12 @@ const generateTokens = async (
     let decoded: { email?: string };
 
     try {
-      decoded = jwt.verify(tempOAuthToken, process.env.TEMP_JWT_SECRET!) as {
-        email?: string;
-      };
-    } catch {
+      decoded = jwt.verify(
+        tempOAuthToken,
+        process.env.TEMP_JWT_SECRET!
+      ) as { email?: string };
+    } catch (err) {
       return next(new CustomError("Invalid token", 400));
-    }
-
-    if (!decoded.email) {
-      return next(new CustomError("Invalid token payload", 400));
     }
 
     if (!decoded.email) {
@@ -128,7 +135,7 @@ const generateTokens = async (
       data: { tempOAuthToken: null },
     });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: "Login successful",
       data: {
@@ -144,6 +151,7 @@ const generateTokens = async (
       },
     });
   } catch (error) {
+    console.error("Generate token error:", error);
     next(new CustomError("Something went wrong", 500));
   }
 };
