@@ -13,7 +13,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export const generateOTP = (): string => {
-  return Math.floor(1000 + Math.random() * 9000).toString();
+  return Math.floor(100000 + Math.random() * 900000).toString();
 };
 
 export const sendOTP = asyncHandler(
@@ -87,12 +87,20 @@ export const sendOTP = asyncHandler(
     await redisClient.incr(sentCountKey);
     await redisClient.expire(sentCountKey, 3600);
 
-    await sendEmail(
-      email,
-      `Your OTP for ${purpose}`,
-      "OTP Verification",
-      `Your OTP is: ${otp}`
-    );
+    // await sendEmail(
+    //   email,
+    //   `Your OTP for ${purpose}`,
+    //   "OTP Verification",
+    //   `Your OTP is: ${otp}`
+    // );
+    await sendEmail({
+    email: user.email,
+    subject: "Your Doc-Cluster OTP",
+    username: user.username,
+    otp: `Your OTP is: ${otp}`,
+    subjectText: `Your OTP for ${purpose}`,
+    closingText: "If you did not request this, you can safely ignore this email.",
+  });
 
     return res
       .status(202)

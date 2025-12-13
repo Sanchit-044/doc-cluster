@@ -3,6 +3,8 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import { ZodError } from "zod";
+import swaggerUi from "swagger-ui-express";
+import YAML from "yamljs";
 
 import allRoutes from "./routes";
 import { ApiError } from "./utils/ApiError";
@@ -18,8 +20,6 @@ app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
 
@@ -35,6 +35,10 @@ app.use(cookieParser());
 //api routes
 
 app.use("/api", allRoutes);
+
+//swagger docs setup
+const swaggerDocument = YAML.load("./src/swagger.yaml");
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 //error handlers
 app.use(

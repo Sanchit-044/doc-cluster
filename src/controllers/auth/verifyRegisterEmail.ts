@@ -52,7 +52,7 @@ export const verifyEmail = asyncHandler(
       { EX: 3600 }
     );
 
-    /* ✅ JWT PAYLOADS MUST BE OBJECTS */
+    // Generate Tokens
     const accessToken = generateAccessToken({
       id: updatedUser.id,
       email: updatedUser.email,

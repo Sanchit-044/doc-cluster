@@ -11,68 +11,89 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const sendEmail = (
-  email: string,
-  subject: string,
-  body: string,
-  data: string
-) => {
-  transporter.sendMail({
-    from: `"Chrona" <no-reply@chrona.com>`,
+type SendEmailParams = {
+  email: string;
+  subject: string;
+  username: string;
+  otp: string;
+  subjectText: string;
+  closingText: string;
+};
+
+const sendEmail = async ({
+  email,
+  subject,
+  username,
+  otp,
+  subjectText,
+  closingText,
+}: SendEmailParams) => {
+  await transporter.sendMail({
+    from: `"Doc-Cluster" <${process.env.COMP_EMAIL}>`,
     to: email,
     subject,
     html: `
-    <div style="
-      font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      background-color: #f9fafb;
-      padding: 40px 20px;
-      color: #333;
-    ">
-      <div style="
-        max-width: 600px;
-        margin: auto;
-        background: #ffffff;
-        border-radius: 10px;
-        padding: 30px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-      ">
-        <div style="text-align: center; margin-bottom: 20px;">
-          <h1 style="
-            color: #4f46e5;
-            font-size: 28px;
-            margin-bottom: 5px;
-          ">Chrona</h1>
-          <p style="
-            font-size: 14px;
-            color: #6b7280;
-          ">Your time management companion</p>
-        </div>
+      <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif; background-color: #ffffff;">
+        <div style="max-width: 600px; width: 100%; margin: 0 auto; padding: 24px; border: 1px solid #E5E7EB; border-radius: 12px; background-color: #EFF6FF; box-sizing: border-box;">
 
-        <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
-
-        <div style="font-size: 16px; line-height: 1.6;">
-          <p style="margin-bottom: 10px;">${body}</p>
-          <div style="
-            background: #f3f4f6;
-            padding: 15px;
-            border-radius: 8px;
-            text-align: center;
-            font-weight: bold;
-            color: #1f2937;
-            margin-top: 10px;
-            font-size: 18px;
-          ">
-            ${data}
+          <!-- Logo -->
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img 
+              src="https://i.ibb.co/T1BNfgR/Untitled.jpg" 
+              alt="Doc-Cluster" 
+              style="width: 140px; margin: 0 auto;"
+            />
           </div>
-        </div>
 
-        <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;" />
+          <!-- Greeting -->
+          <p style="color: #1E3A8A; font-size: 20px; line-height: 1.5; text-align: center;">
+            Hello <strong>${username}</strong>,
+          </p>
 
-        <div style="text-align: center; font-size: 13px; color: #9ca3af;">
-          <p>© ${new Date().getFullYear()} Chrona. All rights reserved.</p>
+          <!-- Subject -->
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6; text-align: center;">
+            ${subjectText}
+          </p>
+
+          <!-- OTP Box -->
+          <div style="text-align: center; margin: 24px 0;">
+            <span style="font-size: 30px; font-weight: bold; color: #2563EB;">
+              ${otp}
+            </span>
+          </div>
+
+          <!-- Info Text -->
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6; text-align: center;">
+            This OTP is valid for the next <strong>10 minutes</strong>. 
+            Please keep it secure and do not share it with anyone.
+          </p>
+
+          <!-- Closing -->
+          <p style="color: #4B5563; font-size: 16px; line-height: 1.6; text-align: center;">
+            ${closingText}
+          </p>
+
+          <!-- Signature -->
+          <p style="color: #1E3A8A; font-size: 16px; line-height: 1.6; text-align: center; margin-top: 20px;">
+            Best regards,<br />
+            <strong>Doc-Cluster Team</strong>
+          </p>
+
+          <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 30px 0;" />
+
+          <!-- Footer -->
+          <p style="font-size: 13px; color: #6B7280; text-align: center; line-height: 1.5;">
+            Need help? Contact our support team at 
+            <a 
+              href="mailto:doccluster4u@gmail.com" 
+              style="color: #2563EB; text-decoration: none;"
+            >
+              doccluster4u@gmail.com
+            </a>.
+          </p>
+
         </div>
-      </div>
-    </div>
+      </body>
     `,
   });
 };

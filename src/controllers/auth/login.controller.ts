@@ -48,7 +48,7 @@ export const loginUser = asyncHandler(
       }
     }
 
-    /* ---------- PASSWORD LOGIN ---------- */
+    //login with password
     else {
       if (!password || !emailOrPhoneOrUsername) {
         throw new ApiError(400, "Credentials required");
@@ -84,7 +84,7 @@ export const loginUser = asyncHandler(
       throw new ApiError(500, "Authentication failed");
     }
 
-    /* ---------- JWT TOKENS (OBJECT PAYLOADS) ---------- */
+    // Generate Tokens
     const accessToken = generateAccessToken({
       id: user.id,
       email: user.email,

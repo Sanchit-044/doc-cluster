@@ -25,7 +25,7 @@ const baseSchema = z
     phoneNumber: z.string().min(10, "Phone number must be at least 10 digits long.").optional(),
     DOB: z.string().optional(),
   })
-  .passthrough(); // <-- FIX: allows extra fields
+  .passthrough();
 
 // Schemas for specific routes
 
