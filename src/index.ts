@@ -37,7 +37,7 @@ app.use(cookieParser());
 app.use("/api", allRoutes);
 
 //swagger docs setup
-const swaggerDocument = YAML.load("./src/swagger.yaml");
+const swaggerDocument = YAML.load("./swagger.yaml");
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 //error handlers
