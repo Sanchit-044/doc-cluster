@@ -48,10 +48,10 @@ jobs:
 
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            docker compose pull
+            docker-compose pull
 
-            docker compose up -d --no-deps --build doc-cluster-app
+            docker-compose up -d --no-deps --build doc-cluster-app
 
-            docker compose exec -T doc-cluster-app npx prisma migrate deploy
+            docker-compose exec -T doc-cluster-app npx prisma migrate deploy
 
             docker image prune -f
