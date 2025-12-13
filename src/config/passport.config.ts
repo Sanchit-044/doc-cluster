@@ -11,14 +11,9 @@ passport.use(
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       callbackURL: `${process.env.BASE_URL}/auth/google/callback`,
     },
-    async (
-      accessToken: string,
-      refreshToken: string,
-      profile: GoogleProfile,
-      done: (error: Error | null, user?: { tempOAuthToken: string }) => void
-    ) => {
+    async (accessToken, refreshToken, profile, done) => {
       try {
-        const email = profile.emails?.[0].value;
+        const email = profile.emails?.[0]?.value;
         if (!email) {
           return done(new Error("No email found in Google profile"));
         }
@@ -26,34 +21,34 @@ passport.use(
         let user = await prisma.user.findUnique({
           where: { email },
         });
-        const tempOAuthToken = jwt.sign({ email }, process.env.TEMP_JWT_SECRET!, { expiresIn: "1m" });
+
+        const tempOAuthToken = jwt.sign(
+          { email },
+          process.env.TEMP_JWT_SECRET!,
+          { expiresIn: "1m" }
+        );
 
         if (user) {
-          const updateData: {
-            profileImage: string | null;
-            isEmailVerified: boolean;
-            tempOAuthToken: string;
-            googleId?: string;
-          } = {
-            profileImage: profile.photos?.[0]?.value || null,
-            isEmailVerified: true,
-            tempOAuthToken,
-          };
-  
-
-          user = await prisma.user.update({
+          await prisma.user.update({
             where: { email },
-            data: updateData,
+            data: {
+              isEmailVerified: true,
+              avatarInfo: profile.photos?.[0]?.value
+                ? { google: profile.photos[0].value }
+                : undefined,
+            },
           });
-        } 
+        }
 
-        done(null, { tempOAuthToken });
+        return done(null, { tempOAuthToken });
       } catch (err) {
-        done(err as Error);
+        console.error("Google OAuth error:", err);
+        return done(err as Error);
       }
     }
   )
 );
+
 
 passport.use(
   new GitHubStrategy(
