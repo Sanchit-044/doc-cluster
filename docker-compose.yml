@@ -12,11 +12,6 @@ services:
       - db
       - redis
     restart: always
-    volumes:
-      - .:/app
-      - /app/node_modules
-    command: sh -c "npx prisma migrate deploy && npm run dev"
-
   db:
     image: postgres:15-alpine
     container_name: doc-cluster-db
