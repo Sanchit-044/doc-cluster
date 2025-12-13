@@ -31,27 +31,6 @@ app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(cookieParser());
 
-//health check route
-app.get("/api/health", async (_req: Request, res: Response) => {
-  let redisStatus = "down";
-
-  try {
-    const pong = await redisClient.ping();
-    if (pong === "PONG") redisStatus = "up";
-  } catch {}
-
-  res.status(200).json({
-    success: true,
-    status: "ok",
-    services: {
-      api: "up",
-      redis: redisStatus,
-      database: "up",
-    },
-    timestamp: new Date().toISOString(),
-  });
-});
-
 
 //api routes
 

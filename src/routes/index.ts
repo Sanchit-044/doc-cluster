@@ -1,10 +1,37 @@
-import { Router } from "express";
-import authRoutes from "./auth.routes"
+import { Router, Request, Response } from "express";
+import authRoutes from "./auth.routes";
+import { redisClient } from "../config/redis";
+import { prisma } from "../config/prisma";
 
-const router = Router()
+const router = Router();
 
+//health check route
+router.get("/health", async (_req: Request, res: Response) => {
+  let redisStatus = "down";
+  let dbStatus = "down";
 
-router.use("/auth",authRoutes)
+  try {
+    const pong = await redisClient.ping();
+    if (pong === "PONG") redisStatus = "up";
+  } catch {}
 
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    dbStatus = "up";
+  } catch {}
+
+  res.status(200).json({
+    success: true,
+    status: "ok",
+    services: {
+      api: "up",
+      redis: redisStatus,
+      database: dbStatus,
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+router.use("/auth", authRoutes);
 
 export default router;
