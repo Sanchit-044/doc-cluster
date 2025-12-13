@@ -46,12 +46,12 @@ jobs:
           script: |
             cd /home/ubuntu
 
-            echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+            echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
-            docker-compose pull
+            sudo docker compose pull
 
-            docker-compose up -d --no-deps --build doc-cluster-app
+            sudo docker compose up -d --no-deps doc-cluster-app
 
-            docker-compose exec -T doc-cluster-app npx prisma migrate deploy
+            sudo docker compose exec -T doc-cluster-app npx prisma migrate deploy
 
-            docker image prune -f
+            sudo docker image prune -f
