@@ -1,68 +1,54 @@
-import { Response, Request, NextFunction } from "express";
+import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
-import bcrypt from "bcrypt";
-import { sendOtpEmail } from "./otp";
-import { CustomError, CustomOtpRequest } from "../../types";
+import { ApiError } from "../../utils/ApiError";
+import { ApiResponse } from "../../utils/ApiResponse";
+import { asyncHandler } from "../../utils/asyncHandler";
+import { hashPassword } from "../../utils/hash";
+import crypto from "crypto"
 
-const registerUser = async (
-  req: CustomOtpRequest,
-  res: Response,
-  next: NextFunction
-) => {
-  try {
-    let { email, password, username } = req.body;
 
-    email = email?.trim().toLowerCase();
-    password = password?.trim();
-    username = username?.trim();
 
-    if (!email || !password || !username) {
-      return next(new CustomError("Email, password and username are required", 400));
-    }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-    });
 
-    if (existingUser?.isVerified) {
-      return next(new CustomError("Email already exists", 400));
-    }
+export const registerUser = asyncHandler(async (req: Request, res: Response) => {
+  const { fullName, email, username, DOB, password } = req.body;
 
-    if (existingUser && !existingUser.isVerified) {
-      await prisma.user.delete({
-        where: { id: existingUser.id },
-      });
-    }
+  const existing = await prisma.user.findFirst({
+    where: {
+      OR: [{ email: email.toLowerCase() }, { username }],
+    },
+    select: { id: true, isEmailVerified: true },
+  });
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-
-    // FIX: Convert DOB if present
-    let DOB = undefined;
-    if (req.body.DOB) {
-      DOB = new Date(req.body.DOB);
-      if (isNaN(DOB.getTime())) {
-        return next(new CustomError("Invalid DOB format", 400));
-      }
-    }
-
-    await prisma.user.create({
-      data: {
-        email,
-        password: hashedPassword,
-        username,
-        DOB,
-        isVerified:true
-      },
-    });
-
-    // return sendOtpEmail(req, res, next);
-
-  } catch (error) {
-    console.error("REGISTER USER ERROR:", error);
-    const err = error as Error;
-    return next(new CustomError("Something went wrong", 500, err.message));
+  if (existing?.isEmailVerified) {
+    throw new ApiError(400, "User already exists");
   }
-};
 
-export default registerUser;
+  if (existing && !existing.isEmailVerified) {
+    await prisma.user.delete({ where: { id: existing.id } });
+  }
+
+  const user = await prisma.user.create({
+    data: {
+      email: email.toLowerCase(),
+      username,
+      fullName,
+      DOB: DOB ? new Date(DOB) : undefined,
+      password: await hashPassword(password),
+         streamKey: crypto.randomBytes(16).toString("hex")
+   
+    },
+  });
+
+  res.status(201).json(
+    new ApiResponse(
+      201,
+      {
+        id: user.id,
+        email: user.email,
+        username: user.username,
+      },
+      "Verify your email"
+    )
+  );
+});

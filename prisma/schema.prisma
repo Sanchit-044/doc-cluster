@@ -10,26 +10,38 @@ datasource db {
 model User {
   id              String   @id @default(uuid())
   email           String   @unique @db.VarChar(100)
-  fullName        String?  @db.VarChar(50)
-  phoneNumber     String?  @db.VarChar(15)
-  isVerified Boolean  @default(false)
-
-  avatarUrl       String?  @db.VarChar(300)
-  avatarId        String?  @db.VarChar(200)
-  coverInfo       Json?
-  DOB             DateTime?
-  bio             String?  @db.VarChar(250)
-
   username        String   @unique @db.VarChar(30)
   password        String   @db.VarChar(200)
 
+  fullName        String?  @db.VarChar(50)
+  phoneNumber     String?  @db.VarChar(15)
+  DOB             DateTime?
+
+  isEmailVerified Boolean  @default(false)
+  streamKey       String
+
+  avatarInfo      Json?
+  coverInfo       Json?
+
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+
+  @@index([email])
+  @@index([username])
 }
+
+model ResetLink {
+  id        String   @id @default(uuid())
+  email     String   @db.VarChar(100)
+  token     String   @db.VarChar(64)
+  expiresAt DateTime
+
+  @@index([email])
+}
+
 model Otp {
   id         String   @id @default(uuid())
   email      String   @db.VarChar(100)
   otp        String   @db.VarChar(10)
-  createdAt  DateTime @default(now())
   expiresAt  DateTime
 }

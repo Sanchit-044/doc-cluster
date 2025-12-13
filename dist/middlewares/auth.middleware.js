@@ -1,0 +1,248 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.resendOtp = exports.sendOtpEmail = exports.verifyOtp = void 0;
+const customError_1 = require("../types/customError");
+const sendEmail_1 = require("../utils/sendEmail");
+const prisma_1 = require("../config/prisma");
+const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
+const generateEmailContent = (otp, username, type) => {
+    const isRegister = type === "register";
+    const subjectText = isRegister
+        ? "Welcome to Doc-Cluster! Please verify your email address by entering the One-Time Password (OTP) below:"
+        : "Use the One-Time Password (OTP) below to securely log in to your Doc-Cluster account:";
+    const closingText = isRegister
+        ? "If you did not request this verification, you can safely ignore this email."
+        : "If you did not attempt to log in, please ignore this email.";
+    return `
+    <body style="margin: 0; padding: 0; width: 100%; font-family: Arial, sans-serif; background-color: #ffffff;">
+      <div style="max-width: 600px; width: 100%; margin: 0 auto; padding: 24px; border: 1px solid #E5E7EB; border-radius: 12px; background-color: #EFF6FF; box-sizing: border-box;">
+
+        <!-- Logo -->
+        <div style="text-align: center; margin-bottom: 20px;">
+          <img src="https://i.ibb.co/T1BNfgR/Untitled.jpg" alt="Doc-Cluster" style="width: 140px; margin: 0 auto;">
+        </div>
+
+        <!-- Greeting -->
+        <p style="color: #1E3A8A; font-size: 20px; line-height: 1.5; text-align: center;">
+          Hello <strong>${username}</strong>,
+        </p>
+
+        <!-- Subject -->
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; text-align: center;">
+          ${subjectText}
+        </p>
+
+        <!-- OTP Box -->
+        <div style="text-align: center; margin: 24px 0;">
+          <span style="font-size: 30px; font-weight: bold; color: #2563EB;">${otp}</span>
+        </div>
+
+        <!-- Info Text -->
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; text-align: center;">
+          This OTP is valid for the next <strong>10 minutes</strong>. Please keep it secure and do not share it with anyone.
+        </p>
+
+        <!-- Closing -->
+        <p style="color: #4B5563; font-size: 16px; line-height: 1.6; text-align: center;">
+          ${closingText}
+        </p>
+
+        <!-- Signature -->
+        <p style="color: #1E3A8A; font-size: 16px; line-height: 1.6; text-align: center; margin-top: 20px;">
+          Best regards,<br><strong>Doc-Cluster Team</strong>
+        </p>
+
+        <hr style="border: 0; border-top: 1px solid #E5E7EB; margin: 30px 0;">
+
+        <!-- Footer -->
+        <p style="font-size: 13px; color: #6B7280; text-align: center; line-height: 1.5;">
+          Need help? Contact our support team at 
+          <a href="mailto:doccluster4u@gmail.com" style="color: #2563EB; text-decoration: none;">
+            doccluster4u@gmail.com
+          </a>.
+        </p>
+
+      </div>
+    </body>
+  `;
+};
+const sendOtpEmail = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        if (!email || typeof email !== 'string') {
+            next(new customError_1.CustomError('Email is required', 400));
+            return;
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        });
+        if (!user) {
+            next(new customError_1.CustomError('User not found', 404));
+            return;
+        }
+        const otp = Math.floor(1000 + Math.random() * 9000).toString();
+        await Promise.allSettled([
+            prisma_1.prisma.otp.deleteMany({
+                where: { email: normalizedEmail }
+            }),
+            prisma_1.prisma.otp.create({
+                data: {
+                    email: normalizedEmail,
+                    otp,
+                    expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+                }
+            })
+        ]);
+        const emailContent = generateEmailContent(otp, user.username, req.type);
+        if (req.type === "login") {
+            res.status(200).json({ success: true, message: 'OTP sent to your email' });
+        }
+        (0, sendEmail_1.sendEmail)(user.email, req.type === "register" ? "Your OTP for email verification" : "Your OTP for login", emailContent).catch((error) => {
+            console.error("Error sending email: ", error);
+        });
+        // If register, send response after email attempt
+        if (req.type === "register") {
+            res.status(200).json({ success: true, message: 'OTP sent to your email' });
+        }
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new customError_1.CustomError('Something went wrong', 500, errorMessage));
+    }
+};
+exports.sendOtpEmail = sendOtpEmail;
+const verifyOtp = async (req, res, next) => {
+    try {
+        let { email, otp } = req.body;
+        const type = req.type;
+        if (!email || !otp || !type) {
+            next(new customError_1.CustomError("Email, OTP and type are required", 400));
+            return;
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        const result = await prisma_1.prisma.$transaction(async (tx) => {
+            const storedOtp = await tx.otp.findFirst({
+                where: {
+                    email: normalizedEmail,
+                    otp,
+                    expiresAt: { gt: new Date() }
+                }
+            });
+            const user = await tx.user.findUnique({
+                where: { email: normalizedEmail }
+            });
+            if (!user) {
+                throw new customError_1.CustomError("User not found", 404);
+            }
+            if (!storedOtp) {
+                throw new customError_1.CustomError("Invalid OTP", 400);
+            }
+            if (user.isVerified && type === "register") {
+                throw new customError_1.CustomError("User Already Verified", 400);
+            }
+            if (!user.isVerified && type === "login") {
+                throw new customError_1.CustomError("User Not Verified", 400);
+            }
+            // Only update verification if registering
+            let updatedUser = user;
+            if (type === "register") {
+                updatedUser = await tx.user.update({
+                    where: { email: normalizedEmail },
+                    data: { isVerified: true }
+                });
+            }
+            await tx.otp.delete({
+                where: { id: storedOtp.id }
+            });
+            const accessTokenKey = process.env.ACCESS_TOKEN_SECRET;
+            const refreshTokenKey = process.env.REFRESH_TOKEN_SECRET;
+            if (!accessTokenKey || !refreshTokenKey) {
+                throw new Error("JWT secrets not configured");
+            }
+            const accessToken = jsonwebtoken_1.default.sign({ userId: user.id, }, accessTokenKey, { expiresIn: "7d" });
+            const refreshToken = jsonwebtoken_1.default.sign({ userId: user.id }, refreshTokenKey, { expiresIn: "30d" });
+            return {
+                user: {
+                    id: updatedUser.id,
+                    username: updatedUser.username,
+                    email: updatedUser.email,
+                    isVerified: updatedUser.isVerified
+                },
+                accessToken,
+                refreshToken
+            };
+        });
+        res.status(200).json({
+            success: true,
+            message: type === "register" ? "Email verified successfully" : "Logged in successfully",
+            data: {
+                user: {
+                    id: result.user.id,
+                    username: result.user.username,
+                    email: result.user.email,
+                    isVerified: result.user.isVerified,
+                },
+                tokens: {
+                    accessToken: result.accessToken,
+                    refreshToken: result.refreshToken
+                }
+            }
+        });
+    }
+    catch (error) {
+        if (error instanceof customError_1.CustomError) {
+            next(error);
+        }
+        else {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            next(new customError_1.CustomError('Something went wrong', 500, errorMessage));
+        }
+    }
+};
+exports.verifyOtp = verifyOtp;
+const resendOtp = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        if (!email || typeof email !== 'string') {
+            next(new customError_1.CustomError('Email is required', 400));
+            return;
+        }
+        const normalizedEmail = email.trim().toLowerCase();
+        const user = await prisma_1.prisma.user.findUnique({
+            where: { email: normalizedEmail }
+        });
+        if (!user) {
+            next(new customError_1.CustomError('User not found!', 404));
+            return;
+        }
+        if (user.isVerified) {
+            next(new customError_1.CustomError('Email already verified!', 400));
+            return;
+        }
+        const latestOtp = await prisma_1.prisma.otp.findFirst({
+            where: { email: normalizedEmail },
+            orderBy: { createdAt: 'desc' }
+        });
+        const thirtySeconds = 30 * 1000;
+        if (latestOtp &&
+            Date.now() - latestOtp.createdAt.getTime() < thirtySeconds) {
+            next(new customError_1.CustomError('OTP requests are limited to one per 30 seconds.', 429));
+            return;
+        }
+        // Call sendOtpEmail but don't send response twice
+        await sendOtpEmail(req, res, next);
+        // If sendOtpEmail didn't send a response (e.g., in error case), send success
+        if (!res.headersSent) {
+            res.status(200).json({ success: true, message: 'OTP sent to your email' });
+        }
+    }
+    catch (error) {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+        next(new customError_1.CustomError('Something went wrong', 500, errorMessage));
+    }
+};
+exports.resendOtp = resendOtp;

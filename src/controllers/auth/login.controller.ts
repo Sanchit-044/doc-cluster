@@ -1,106 +1,109 @@
-import { Request, Response, NextFunction } from "express";
+import { Request, Response } from "express";
 import { prisma } from "../../config/prisma";
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import { CustomError } from "../../types/index";
-import { UAParser } from "ua-parser-js";
+import { options } from "../../constant";
+import { ApiError } from "../../utils/ApiError";
+import { ApiResponse } from "../../utils/ApiResponse";
+import { asyncHandler } from "../../utils/asyncHandler";
+import { verifyPassword } from "../../utils/hash";
+import {
+  generateAccessToken,
+  generateRefreshToken,
+} from "../../utils/jwt";
+import { verifyOtp } from "../verification/verifyOtp.controller";
+// import { User } from "@prisma/client";
 
-type LoginBody = {
+interface LoginBody {
+  emailOrPhoneOrUsername?: string;
+  password?: string;
+  otp?: string;
   email?: string;
-  username?: string;
-  password: string;
-};
-const COOKIE_NAME = process.env.COOKIE_NAME as string;
-const REFRESH_TOKEN_EXPIRES_MS = Number(process.env.REFRESH_TOKEN_COOKIE_EXP_MS);
+}
 
-const loginUser = async (req: Request<{}, {}, LoginBody>, res: Response, next: NextFunction) => {
-  try {
-    let { email, username, password } = req.body ?? ({} as LoginBody);
+export const loginUser = asyncHandler(
+  async (
+    req: Request<{}, {}, LoginBody>,
+    res: Response
+  ): Promise<Response> => {
+    const { emailOrPhoneOrUsername, password, otp, email } = req.body;
 
-    email = email?.trim();
-    username = username?.trim();
-    password = password?.trim();
+    let user:any = null;
 
-    if ((!email && !username) || !password) {
-      next(new CustomError("Email or username and password are required", 400));
-      return;
+    
+    if (otp) {
+      if (!email) {
+        throw new ApiError(400, "Email required");
+      }
+
+      user = await prisma.user.findUnique({
+        where: { email: email.toLowerCase() },
+      });
+
+      if (!user) {
+        throw new ApiError(404, "User not found");
+      }
+
+      const verified = await verifyOtp(email, "login", otp);
+      if (!verified) {
+        throw new ApiError(400, "Invalid OTP");
+      }
     }
 
-    const user = await prisma.user.findFirst({
-      where: {
-        OR: [
-          email ? { email: email.toLowerCase() } : undefined,
-          username ? { username } : undefined,
-        ].filter(Boolean) as any[],
-      },
+    /* ---------- PASSWORD LOGIN ---------- */
+    else {
+      if (!password || !emailOrPhoneOrUsername) {
+        throw new ApiError(400, "Credentials required");
+      }
+
+      const identifier = emailOrPhoneOrUsername.trim();
+
+      user = await prisma.user.findFirst({
+        where: {
+          OR: [
+            { email: identifier.toLowerCase() },
+            { username: identifier },
+            { phoneNumber: identifier },
+          ],
+        },
+      });
+
+      if (!user) {
+        throw new ApiError(404, "User not found");
+      }
+
+      const isValid = await verifyPassword(password, user.password);
+      if (!isValid) {
+        throw new ApiError(401, "Invalid password");
+      }
+
+      if (!user.isEmailVerified) {
+        throw new ApiError(401, "Email not verified");
+      }
+    }
+
+    if (!user) {
+      throw new ApiError(500, "Authentication failed");
+    }
+
+    /* ---------- JWT TOKENS (OBJECT PAYLOADS) ---------- */
+    const accessToken = generateAccessToken({
+      id: user.id,
+      email: user.email,
     });
 
-    if (!user || !user.isVerified) {
-      next(new CustomError("User not found or not verified", 401));
-      return;
-    }
+    const refreshToken = generateRefreshToken({
+      id: user.id,
+    });
 
-    if (!user.password) {
-      next(new CustomError("Password not set for this account", 401));
-      return;
-    }
-
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      next(new CustomError("Invalid password", 401));
-      return;
-    }
-
-    const accessTokenKey = process.env.ACCESS_TOKEN_SECRET;
-    const refreshTokenKey = process.env.REFRESH_TOKEN_SECRET;
-    if (!accessTokenKey || !refreshTokenKey) {
-      next(new CustomError("Server configuration error", 500));
-      return;
-    }
-
-    const payload = { userId: user.id, version:  0 };
-    
-    const accessToken = jwt.sign(
-        { userId: user.id, },
-        accessTokenKey,
-        { expiresIn: "1d" }
-      );
-      const refreshToken = jwt.sign(
-        { userId: user.id ,},
-        refreshTokenKey,
-        { expiresIn: "7d" }
-      );
-
-
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as "lax" | "strict" | "none",
-      maxAge: REFRESH_TOKEN_EXPIRES_MS,
-      path: "/",
-    };
-
-    res.cookie(COOKIE_NAME, refreshToken, cookieOptions);
-
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      data: {
-        user: {
+    return res
+      .status(200)
+      .cookie("accessToken", accessToken, options)
+      .cookie("refreshToken", refreshToken, options)
+      .json(
+        new ApiResponse(200, {
           id: user.id,
           email: user.email,
-          name: user.username,
-          isVerified: user.isVerified,
-        },
-        tokens: {
-          accessToken,
-        }
-      },
-    });
-  } catch (error) {
-    const err = error as Error;
-    next(new CustomError("Something went wrong", 500, `${err.message}`));
+          username: user.username,
+        })
+      );
   }
-};
-
-export default loginUser;
+);

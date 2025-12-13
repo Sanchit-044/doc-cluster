@@ -28,6 +28,28 @@ const baseSchema = z
   .passthrough(); // <-- FIX: allows extra fields
 
 // Schemas for specific routes
+
+
+
+export const sendOTPSchema = z.object({
+  email: z.string().email().optional(),
+});
+
+export const checkOtpSchema = z.object({
+  email: z.string().email(),
+  otp: z.string().min(1),
+  purpose: z.string().min(1),
+});
+
+
+
+
+
+
+
+
+
+
 export const registerSchema = baseSchema.pick({
   username: true,
   email: true,
