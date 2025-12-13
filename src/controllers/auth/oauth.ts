@@ -75,10 +75,19 @@ const generateTokens = async (
       return next(new CustomError("Invalid token", 400));
     }
 
-    const decoded = jwt.verify(
-      tempOAuthToken,
-      process.env.TEMP_JWT_SECRET!
-    ) as { email?: string };
+    let decoded: { email?: string };
+
+    try {
+      decoded = jwt.verify(tempOAuthToken, process.env.TEMP_JWT_SECRET!) as {
+        email?: string;
+      };
+    } catch {
+      return next(new CustomError("Invalid token", 400));
+    }
+
+    if (!decoded.email) {
+      return next(new CustomError("Invalid token payload", 400));
+    }
 
     if (!decoded.email) {
       return next(new CustomError("Invalid token payload", 400));
