@@ -1,4 +1,5 @@
 openapi: 3.0.3
+
 info:
   title: Doc-Cluster API
   description: Authentication and system APIs for Doc-Cluster
@@ -13,6 +14,7 @@ tags:
   - name: Authentication
   - name: OTP
   - name: OAuth
+  - name: Password
 
 paths:
   /health:
@@ -57,7 +59,7 @@ paths:
               $ref: "#/components/schemas/LoginRequest"
       responses:
         200:
-          description: Login successful (cookies set)
+          description: Login successful
           headers:
             Set-Cookie:
               schema:
@@ -96,6 +98,9 @@ paths:
     post:
       tags: [OTP]
       summary: Verify OTP
+      description: >
+        Verifies OTP for register, login, or reset-password flows.
+        OTP verification is required before resetting password.
       requestBody:
         required: true
         content:
@@ -133,40 +138,39 @@ paths:
                 $ref: "#/components/schemas/SuccessResponse"
 
   /auth/reset-password:
-  post:
-    tags: [Authentication, Password]
-    summary: Reset password using OTP
-    description: Resets the user's password after successful OTP verification.
-    requestBody:
-      required: true
-      content:
-        application/json:
-          schema:
-            type: object
-            required:
-              - email
-              - password
-            properties:
-              email:
-                type: string
-                format: email
-                example: user@doc-cluster.com
-              password:
-                type: string
-                format: password
-                example: StrongPassword@123
-    responses:
-      200:
-        description: Password reset successful
+    post:
+      tags: [Authentication, Password]
+      summary: Reset password using OTP
+      description: Resets the user's password after successful OTP verification.
+      requestBody:
+        required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/SuccessResponse"
-      400:
-        description: Invalid request
-      404:
-        description: User not found
-
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@doc-cluster.com
+                password:
+                  type: string
+                  format: password
+                  example: StrongPassword@123
+      responses:
+        200:
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: Invalid request
+        404:
+          description: User not found
 
   /auth/google:
     get:
@@ -258,10 +262,12 @@ components:
       properties:
         email:
           type: string
+          format: email
         otp:
           type: string
         purpose:
           type: string
+          enum: [register, login, reset-password]
 
     VerifyEmailRequest:
       type: object
@@ -269,6 +275,7 @@ components:
       properties:
         email:
           type: string
+          format: email
         otp:
           type: string
 
