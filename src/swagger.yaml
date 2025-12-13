@@ -77,7 +77,7 @@ paths:
           required: true
           schema:
             type: string
-            enum: [register, login]
+            enum: [register, login, reset-password]
       requestBody:
         required: true
         content:
@@ -131,6 +131,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/reset-password:
+  post:
+    tags: [Authentication, Password]
+    summary: Reset password using OTP
+    description: Resets the user's password after successful OTP verification.
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            required:
+              - email
+              - password
+            properties:
+              email:
+                type: string
+                format: email
+                example: user@doc-cluster.com
+              password:
+                type: string
+                format: password
+                example: StrongPassword@123
+    responses:
+      200:
+        description: Password reset successful
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SuccessResponse"
+      400:
+        description: Invalid request
+      404:
+        description: User not found
+
 
   /auth/google:
     get:
@@ -304,3 +340,5 @@ components:
           type: boolean
         message:
           type: string
+        data:
+          type: object

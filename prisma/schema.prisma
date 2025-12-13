@@ -19,6 +19,7 @@ model User {
 
   isEmailVerified Boolean  @default(false)
   streamKey       String
+  version         Int      @default(1)
 
   googleId        String?
   githubId        String?

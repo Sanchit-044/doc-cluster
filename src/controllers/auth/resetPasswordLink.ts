@@ -5,14 +5,6 @@ import { ApiError } from "../../utils/ApiError";
 import { hashPassword } from "../../utils/hash";
 import { ApiResponse } from "../../utils/ApiResponse";
 
-
-
-
-
-
-
-
-
 export const changePasswordViaLink = asyncHandler(async (req, res) => {
   const { token } = req.params;
   const { newPassword } = req.body;
