@@ -1,9 +1,4 @@
-import express, {
-  Application,
-  Request,
-  Response,
-  NextFunction,
-} from "express";
+import express, { Application, Request, Response, NextFunction } from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -11,32 +6,57 @@ import { ZodError } from "zod";
 
 import allRoutes from "./routes";
 import { ApiError } from "./utils/ApiError";
+import { connectDB } from "./config/prisma";
+import { connectRedis, redisClient } from "./config/redis";
 
 dotenv.config();
 
 const app: Application = express();
 
-/* -------------------- Core Middleware -------------------- */
-
-app.set("trust proxy", 1);
-
+//middlewares and cors settings
 app.use(
   cors({
     origin: process.env.FRONTEND_URL,
     credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+
+//proxy settings
+
+app.set("trust proxy", 1);
 
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(cookieParser());
 
-/* -------------------- Routes -------------------- */
+//health check route
+app.get("/health", async (_req: Request, res: Response) => {
+  let redisStatus = "down";
+
+  try {
+    const pong = await redisClient.ping();
+    if (pong === "PONG") redisStatus = "up";
+  } catch {}
+
+  res.status(200).json({
+    success: true,
+    status: "ok",
+    services: {
+      api: "up",
+      redis: redisStatus,
+      database: "up",
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
+//api routes
 
 app.use("/api", allRoutes);
 
-/* -------------------- Error Handler -------------------- */
-
+//error handlers
 app.use(
   (
     err: unknown,
@@ -63,12 +83,7 @@ app.use(
       });
     }
 
-    const statusCode =
-      err instanceof Error && "statusCode" in err
-        ? (err as any).statusCode
-        : 500;
-
-    return res.status(statusCode).json({
+    return res.status(500).json({
       success: false,
       message:
         err instanceof Error ? err.message : "Internal Server Error",
@@ -81,9 +96,16 @@ app.use(
   }
 );
 
-
+//for server port
 const PORT = Number(process.env.PORT) || 3000;
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+const startServer = async () => {
+  await connectDB();
+  await connectRedis();
+
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
+
+startServer();

@@ -20,6 +20,12 @@ model User {
   isEmailVerified Boolean  @default(false)
   streamKey       String
 
+  googleId        String?
+  githubId        String?
+  avatarUrl       String?
+  tempOAuthToken  String?
+
+
   avatarInfo      Json?
   coverInfo       Json?
 

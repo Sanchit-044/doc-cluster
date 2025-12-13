@@ -1,46 +1,19 @@
-import { Request, Response, NextFunction } from "express";
-import { ApiError } from "../utils/ApiError";
 import { createClient } from "redis";
 
-const redisClient = createClient({
+export const redisClient = createClient({
   url: process.env.REDIS_URL,
 });
 
-redisClient.on("error", (err: Error) =>
-  console.error("Redis Client Error", err)
-);
+redisClient.on("error", (err) => {
+  console.error("Redis Client Error", err);
+});
 
-const connectRedis =async()=>{
-try {
-  await redisClient.connect();
-
-} catch (error) {
-  console.log("Unable to connect the redis",error)
-}
-
-
-}
-connectRedis()
-
-
-const checkRedisConnection = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const connectRedis = async () => {
   try {
-    const pong = await redisClient.ping();
-    if (pong !== "PONG") {
-      throw new ApiError(
-        500,
-        "Redis is not responding. Please try again later."
-      );
-    }
-    next();
+    await redisClient.connect();
+    console.log("Redis connected");
   } catch (error) {
-    console.error(" Redis check failed:", error);
-    throw new ApiError(500, "Redis connection error. Please try again later.");
+    console.error("Unable to connect Redis", error);
+    process.exit(1);
   }
 };
-
-export { redisClient, checkRedisConnection };
