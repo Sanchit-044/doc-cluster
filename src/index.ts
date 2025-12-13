@@ -32,7 +32,7 @@ app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(cookieParser());
 
 //health check route
-app.get("/health", async (_req: Request, res: Response) => {
+app.get("/api/health", async (_req: Request, res: Response) => {
   let redisStatus = "down";
 
   try {
@@ -51,6 +51,7 @@ app.get("/health", async (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
 
 //api routes
 
