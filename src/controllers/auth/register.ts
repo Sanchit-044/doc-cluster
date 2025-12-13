@@ -32,8 +32,6 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
     data: {
       email: email.toLowerCase(),
       username,
-      fullName,
-      DOB: DOB ? new Date(DOB) : undefined,
       password: await hashPassword(password),
          streamKey: crypto.randomBytes(16).toString("hex")
    

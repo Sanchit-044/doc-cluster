@@ -188,16 +188,11 @@ components:
       type: object
       required: [email, username, password]
       properties:
-        fullName:
-          type: string
         email:
           type: string
           format: email
         username:
           type: string
-        DOB:
-          type: string
-          format: date
         password:
           type: string
 
