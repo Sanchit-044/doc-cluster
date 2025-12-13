@@ -10,6 +10,9 @@ RUN npx prisma generate
 
 COPY tsconfig.json ./
 COPY src ./src
+
+COPY swagger.yaml ./swagger.yaml
+
 RUN npm run build
 
 EXPOSE 3000
