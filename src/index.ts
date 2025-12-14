@@ -19,7 +19,7 @@ const app: Application = express();
 //middlewares and cors settings
 app.use(
   cors({
-    origin: [process.env.FRONTEND_URL, process.env.BASE_URL, process.env.ADMIN_URL],
+    origin: [process.env.FRONTEND_URL, process.env.BASE_URL, process.env.ADMIN_URL, "http://localhost:3000"],
     credentials: true,
   })
 );
