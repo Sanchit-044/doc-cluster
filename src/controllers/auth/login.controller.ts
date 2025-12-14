@@ -61,7 +61,6 @@ export const loginUser = asyncHandler(
           OR: [
             { email: identifier.toLowerCase() },
             { username: identifier },
-            { phoneNumber: identifier },
           ],
         },
       });
@@ -70,7 +69,7 @@ export const loginUser = asyncHandler(
         throw new ApiError(404, "User not found");
       }
 
-      const isValid = await verifyPassword(password, user.password);
+      const isValid = verifyPassword(password, user.password);
       if (!isValid) {
         throw new ApiError(401, "Invalid password");
       }

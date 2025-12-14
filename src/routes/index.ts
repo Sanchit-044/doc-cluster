@@ -2,6 +2,7 @@ import { Router, Request, Response } from "express";
 import authRoutes from "./auth.routes";
 import { redisClient } from "../config/redis";
 import { prisma } from "../config/prisma";
+import { combinedLimiter } from "../utils/limiter";
 
 const router = Router();
 
@@ -32,6 +33,6 @@ router.get("/health", async (_req: Request, res: Response) => {
   });
 });
 
-router.use("/auth", authRoutes);
+router.use("/auth", combinedLimiter, authRoutes);
 
 export default router;

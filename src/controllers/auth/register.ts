@@ -11,7 +11,7 @@ import crypto from "crypto"
 
 
 export const registerUser = asyncHandler(async (req: Request, res: Response) => {
-  const { fullName, email, username, DOB, password } = req.body;
+  const { email, username, password } = req.body;
 
   const existing = await prisma.user.findFirst({
     where: {

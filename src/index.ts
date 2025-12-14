@@ -10,6 +10,7 @@ import allRoutes from "./routes";
 import { ApiError } from "./utils/ApiError";
 import { connectDB } from "./config/prisma";
 import { connectRedis, redisClient } from "./config/redis";
+import { combinedLimiter, ipLimiter} from "./utils/limiter";
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.set("trust proxy", 1);
 app.use(express.json({ limit: "1gb" }));
 app.use(express.urlencoded({ limit: "1gb", extended: true }));
 app.use(cookieParser());
+app.use(ipLimiter);
 
 
 //api routes
