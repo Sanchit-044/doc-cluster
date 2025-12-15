@@ -14,7 +14,7 @@ export const ipLimiter = rateLimit({
 
 export const emailLimiter = rateLimit({
   windowMs: 2 * 60 * 1000,
-  max: 5,
+  max: 10,
   message: {
     success: false,
     msg: "Too many requests for this email.",
