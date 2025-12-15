@@ -243,10 +243,6 @@ components:
           type: string
         password:
           type: string
-        otp:
-          type: string
-        email:
-          type: string
 
     EmailRequest:
       type: object

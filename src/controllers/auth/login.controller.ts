@@ -15,8 +15,6 @@ import { verifyOtp } from "../verification/verifyOtp.controller";
 interface LoginBody {
   emailOrPhoneOrUsername?: string;
   password?: string;
-  otp?: string;
-  email?: string;
 }
 
 export const loginUser = asyncHandler(
@@ -24,32 +22,14 @@ export const loginUser = asyncHandler(
     req: Request<{}, {}, LoginBody>,
     res: Response
   ): Promise<Response> => {
-    const { emailOrPhoneOrUsername, password, otp, email } = req.body;
+    const { emailOrPhoneOrUsername, password } = req.body;
 
     let user:any = null;
 
-    
-    if (otp) {
-      if (!email) {
-        throw new ApiError(400, "Email required");
-      }
-
-      user = await prisma.user.findUnique({
-        where: { email: email.toLowerCase() },
-      });
-
-      if (!user) {
-        throw new ApiError(404, "User not found");
-      }
-
-      const verified = await verifyOtp(email, "login", otp);
-      if (!verified) {
-        throw new ApiError(400, "Invalid OTP");
-      }
-    }
+    //login with otp
+    //for future
 
     //login with password
-    else {
       if (!password || !emailOrPhoneOrUsername) {
         throw new ApiError(400, "Credentials required");
       }
@@ -69,7 +49,7 @@ export const loginUser = asyncHandler(
         throw new ApiError(404, "User not found");
       }
 
-      const isValid = verifyPassword(password, user.password);
+      const isValid = await verifyPassword(password, user.password);
       if (!isValid) {
         throw new ApiError(401, "Invalid password");
       }
@@ -77,7 +57,6 @@ export const loginUser = asyncHandler(
       if (!user.isEmailVerified) {
         throw new ApiError(401, "Email not verified");
       }
-    }
 
     if (!user) {
       throw new ApiError(500, "Authentication failed");
