@@ -51,7 +51,7 @@ export const loginUser = asyncHandler(
 
       const isValid = await verifyPassword(password, user.password);
       if (!isValid) {
-        throw new ApiError(401, "Invalid password");
+        throw new ApiError(401, "Invalid credentials");
       }
 
       if (!user.isEmailVerified) {
