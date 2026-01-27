@@ -10,7 +10,6 @@ import {
   generateRefreshToken,
 } from "../../utils/jwt";
 import { verifyOtp } from "../verification/verifyOtp.controller";
-// import { User } from "@prisma/client";
 
 interface LoginBody {
   emailOrPhoneOrUsername?: string;
