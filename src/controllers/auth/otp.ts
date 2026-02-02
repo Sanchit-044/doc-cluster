@@ -1,25 +1,13 @@
-
-
-// import { NextFunction, Response } from 'express';
-// import { CustomError } from '../types/customError';
-// import { CustomOtpRequest } from '../types/customOtpRequest';
-// import { sendEmail } from '../utils/sendEmail';
-// import { prisma } from '../config/prisma';
+// import { NextFunction, Response, Request } from 'express';
+// import {CustomError} from '../../types';
+// import { CustomOtpRequest } from '../../types/customOtpRequest';
+// import { sendEmail } from '../../utils/sendEmail';
+// // import  prisma  from '../../config/passport.config';
 // import jwt from 'jsonwebtoken';
-// import { User, Otp } from '@prisma/client';
+// import { prisma } from '../../config/prisma';
+// // import {UAParser} from "ua-parser-js";
 
-// interface VerifyResult {
-//   user: {
-//     id: string;
-//     username: string;
-//     email: string;
-//     isVerified: boolean;
-//   };
-//   accessToken: string;
-//   refreshToken: string;
-// }
-
-// const generateEmailContent = (otp: string, username: string, type: string): string => {
+// const generateEmailContent = (otp: string, username: string, type: string) => {
 //   const isRegister = type === "register";
 
 //   const subjectText = isRegister
@@ -84,193 +72,163 @@
 //   `;
 // };
 
-// const sendOtpEmail = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
+
+// /**
+//  * Sends an OTP to the user's email for verification.
+//  * @param {Request} req - The request object.
+//  * @param {Response} res - The response object.
+//  * @param {NextFunction} next - The next middleware function.
+//  */
+// const sendOtpEmail = async (req: CustomOtpRequest, res: Response, next: NextFunction) => {
 //   try {
 //     const { email } = req.body;
     
-//     if (!email || typeof email !== 'string') {
-//       next(new CustomError('Email is required', 400));
-//       return;
-//     }
-
-//     const normalizedEmail = email.trim().toLowerCase();
-    
 //     const user = await prisma.user.findUnique({
-//       where: { email: normalizedEmail }
+//       where: { email }
 //     });
-    
 //     if (!user) {
 //       next(new CustomError('User not found', 404));
 //       return;
 //     }
 
 //     const otp = Math.floor(1000 + Math.random() * 9000).toString();
-    
 //     await Promise.allSettled([
 //       prisma.otp.deleteMany({
-//         where: { email: normalizedEmail }
+//       where: { email }
 //       }),
 //       prisma.otp.create({
-//         data: {
-//           email: normalizedEmail,
-//           otp,
-//           expiresAt: new Date(Date.now() + 10 * 60 * 1000)
-//         }
+//       data: {
+//         email,
+//         otp,
+//         expiresAt: new Date(Date.now() + 10 * 60 * 1000)
+//       }
 //       })
 //     ]);
-
-//     const emailContent = generateEmailContent(otp, user.username, req.type!);
-    
-//     if (req.type === "login") {
+//     const data = generateEmailContent(otp, user.username as string, req.type!);
+//     if(req.type === "login"){
 //       res.status(200).json({ success: true, message: 'OTP sent to your email' });
 //     }
-
 //     sendEmail(
 //       user.email,
 //       req.type === "register" ? "Your OTP for email verification" : "Your OTP for login",
-//       emailContent
-//     ).catch((error) => {
-//       console.error("Error sending email: ", error);
-//     });
-
-//     // If register, send response after email attempt
-//     if (req.type === "register") {
-//       res.status(200).json({ success: true, message: 'OTP sent to your email' });
-//     }
-
+//       data
+//     ).catch((error) => {console.log("Error sending email: ", error);});
 //   } catch (error) {
-//     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-//     next(new CustomError('Something went wrong', 500, errorMessage));
+//     const err = error as Error;
+//     next(new CustomError('Something went wrong',500,`${err.message}`));
 //   }
 // };
 
-
-// const verifyOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
+// /**
+//  * Verifies the OTP sent to the user's email.
+//  * @param {Request} req - The request object.
+//  * @param {Response} res - The response object.
+//  * @param {NextFunction} next - The next middleware function.
+//  */
+// const verifyOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction) => {
 //   try {
 //     let { email, otp } = req.body;
+//     email = email.trim().toLowerCase();
 //     const type = req.type;
-
-//     if (!email || !otp || !type) {
-//       next(new CustomError("Email, OTP and type are required", 400));
+//     if(!email || !otp || !type){
+//       next(new CustomError("Email and OTP are required", 400));
 //       return;
 //     }
-
-//     const normalizedEmail = email.trim().toLowerCase();
-
 //     const result = await prisma.$transaction(async (tx) => {
 //       const storedOtp = await tx.otp.findFirst({
 //         where: { 
-//           email: normalizedEmail,
+//           email,
 //           otp,
 //           expiresAt: { gt: new Date() }
 //         }
 //       });
 
 //       const user = await tx.user.findUnique({
-//         where: { email: normalizedEmail }
+//         where: { email }
 //       });
 
 //       if (!user) {
-//         throw new CustomError("User not found", 404);
+//         next(new CustomError("User not found", 404));
+//         return;
 //       }
-      
 //       if (!storedOtp) {
-//         throw new CustomError("Invalid OTP", 400);
+//         next(new CustomError("Invalid Otp", 400));
+//         return;
 //       }
+
 
 //       if (user.isVerified && type === "register") {
-//         throw new CustomError("User Already Verified", 400);
+//         next(new CustomError("User Already Verified", 400));
+//         return;
 //       }
-      
 //       if (!user.isVerified && type === "login") {
-//         throw new CustomError("User Not Verified", 400);
+//         next(new CustomError("User Not Verified", 400));
+//         return;
 //       }
 
-//       // Only update verification if registering
-//       let updatedUser = user;
-//       if (type === "register") {
-//         updatedUser = await tx.user.update({
-//           where: { email: normalizedEmail },
-//           data: { isVerified: true }
-//         });
-//       }
+//       await tx.user.update({
+//         where: { email },
+//         data: { isVerified: true }
+//       });
 
 //       await tx.otp.delete({
 //         where: { id: storedOtp.id }
 //       });
-
 //       const accessTokenKey = process.env.ACCESS_TOKEN_SECRET;
 //       const refreshTokenKey = process.env.REFRESH_TOKEN_SECRET;
-      
 //       if (!accessTokenKey || !refreshTokenKey) {
-//         throw new Error("JWT secrets not configured");
+//         console.error("Environment variables not set");
+//         next(new CustomError("Something went wrong", 500));
+//         return null;
 //       }
-
 //       const accessToken = jwt.sign(
-//         { userId: user.id, },
+//         { userId: user.id },
 //         accessTokenKey,
 //         { expiresIn: "7d" }
 //       );
-      
 //       const refreshToken = jwt.sign(
-//         { userId: user.id },
+//         { userId: user.id   },
 //         refreshTokenKey,
 //         { expiresIn: "30d" }
 //       );
-
-//       return { 
-//         user: {
-//           id: updatedUser.id,
-//           username: updatedUser.username,
-//           email: updatedUser.email,
-//           isVerified: updatedUser.isVerified
-//         }, 
-//         accessToken, 
-//         refreshToken 
-//       };
+//       return { user, accessToken, refreshToken };
 //     });
-
+    
 //     res.status(200).json({
 //       success: true,
 //       message: type === "register" ? "Email verified successfully" : "Logged in successfully",
-//       data: {
-//         user: {
-//           id: result.user.id,
-//           username: result.user.username,
-//           email: result.user.email,
-//           isVerified: result.user.isVerified,          
+//       data:{
+//         user:{
+//           id:result?.user.id,
+//           username:result?.user.username,
+//           email:result?.user.email,
+//           isVerified:result?.user.isVerified,          
 //         },
-//         tokens: {
-//           accessToken: result.accessToken,
-//           refreshToken: result.refreshToken
-//         }
+//         tokens:{
+//           accessToken:result?.accessToken,
+//           refreshToken:result?.refreshToken
 //       }
+//     }
 //     });
 
 //   } catch (error) {
-//     if (error instanceof CustomError) {
-//       next(error);
-//     } else {
-//       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-//       next(new CustomError('Something went wrong', 500, errorMessage));
-//     }
+//     const err = error as Error;
+//     next(new CustomError('Something went wrong', 500, `${err.message}`));
 //   }
 // };
 
-
-// const resendOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
+// /**
+//  * Resends an OTP to the user's email if the user is not verified.
+//  * @param {Request} req - The request object.
+//  * @param {Response} res - The response object.
+//  * @param {NextFunction} next - The next middleware function.
+//  */
+// const resendOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction) => {
 //   try {
 //     const { email } = req.body;
 
-//     if (!email || typeof email !== 'string') {
-//       next(new CustomError('Email is required', 400));
-//       return;
-//     }
-
-//     const normalizedEmail = email.trim().toLowerCase();
-
 //     const user = await prisma.user.findUnique({
-//       where: { email: normalizedEmail }
+//       where: { email }
 //     });
 
 //     if (!user) {
@@ -283,8 +241,9 @@
 //       return;
 //     }
 
+
 //     const latestOtp = await prisma.otp.findFirst({
-//       where: { email: normalizedEmail },
+//       where: { email },
 //       orderBy: { createdAt: 'desc' }
 //     });
 
@@ -294,19 +253,13 @@
 //       next(new CustomError('OTP requests are limited to one per 30 seconds.', 429));
 //       return;
 //     }
-
-//     // Call sendOtpEmail but don't send response twice
-//     await sendOtpEmail(req, res, next);
-    
-//     // If sendOtpEmail didn't send a response (e.g., in error case), send success
-//     if (!res.headersSent) {
-//       res.status(200).json({ success: true, message: 'OTP sent to your email' });
-//     }
-
+//     sendOtpEmail(req, res, next);
+//     res.status(200).json({ success: true, message: 'OTP sent to your email' });
 //   } catch (error) {
-//     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-//     next(new CustomError('Something went wrong', 500, errorMessage));
+//     const err = error as Error;
+//     next(new CustomError('Something went wrong', 500, `${err.message}`));
 //   }
 // };
 
-// export { verifyOtp, sendOtpEmail, resendOtp };
+    
+// export {verifyOtp,sendOtpEmail,resendOtp};

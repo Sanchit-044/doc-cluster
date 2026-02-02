@@ -1,0 +1,347 @@
+openapi: 3.0.3
+
+info:
+  title: Doc-Cluster API
+  description: Authentication and system APIs for Doc-Cluster
+  version: 1.0.0
+
+servers:
+  - url: https://doc-cluster.me/api
+    description: Production server
+
+tags:
+  - name: Health
+  - name: Authentication
+  - name: OTP
+  - name: OAuth
+  - name: Password
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      responses:
+        200:
+          description: API health status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        201:
+          description: User registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: Login user (password or OTP)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        200:
+          description: Login successful
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthUserResponse"
+
+  /auth/sendOtp/{purpose}:
+    post:
+      tags: [OTP]
+      summary: Send OTP
+      parameters:
+        - name: purpose
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [register, login, reset-password]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmailRequest"
+      responses:
+        200:
+          description: OTP sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/verifyOtp:
+    post:
+      tags: [OTP]
+      summary: Verify OTP
+      description: >
+        Verifies OTP for register, login, or reset-password flows.
+        OTP verification is required before resetting password.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyOtpRequest"
+      responses:
+        200:
+          description: OTP verified
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/verifyEmail:
+    post:
+      tags: [Authentication]
+      summary: Verify registration email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/VerifyEmailRequest"
+      responses:
+        200:
+          description: Email verified and tokens issued
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/reset-password:
+    post:
+      tags: [Authentication, Password]
+      summary: Reset password using OTP
+      description: Resets the user's password after successful OTP verification.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@doc-cluster.com
+                password:
+                  type: string
+                  format: password
+                  example: StrongPassword@123
+      responses:
+        200:
+          description: Password reset successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        400:
+          description: Invalid request
+        404:
+          description: User not found
+
+  /auth/google:
+    get:
+      tags: [OAuth]
+      summary: Start Google OAuth
+      responses:
+        302:
+          description: Redirect to Google OAuth
+
+  /auth/google/callback:
+    get:
+      tags: [OAuth]
+      summary: Google OAuth callback
+      responses:
+        302:
+          description: Redirect to frontend with temp token
+
+  /auth/github:
+    get:
+      tags: [OAuth]
+      summary: Start GitHub OAuth
+      responses:
+        302:
+          description: Redirect to GitHub OAuth
+
+  /auth/github/callback:
+    get:
+      tags: [OAuth]
+      summary: GitHub OAuth callback
+      responses:
+        302:
+          description: Redirect to frontend with temp token
+
+  /auth/oauth/token:
+    post:
+      tags: [OAuth]
+      summary: Exchange temp OAuth token for JWTs
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OAuthTokenRequest"
+      responses:
+        200:
+          description: Tokens issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OAuthTokenResponse"
+
+components:
+  schemas:
+    RegisterRequest:
+      type: object
+      required: [email, username, password]
+      properties:
+        email:
+          type: string
+          format: email
+        username:
+          type: string
+        password:
+          type: string
+
+    LoginRequest:
+      type: object
+      properties:
+        emailOrPhoneOrUsername:
+          type: string
+        password:
+          type: string
+
+    EmailRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+
+    VerifyOtpRequest:
+      type: object
+      required: [email, otp, purpose]
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+        purpose:
+          type: string
+          enum: [register, login, reset-password]
+
+    VerifyEmailRequest:
+      type: object
+      required: [email, otp]
+      properties:
+        email:
+          type: string
+          format: email
+        otp:
+          type: string
+
+    OAuthTokenRequest:
+      type: object
+      required: [tempOAuthToken]
+      properties:
+        tempOAuthToken:
+          type: string
+
+    AuthUserResponse:
+      type: object
+      properties:
+        statusCode:
+          type: number
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            email:
+              type: string
+            username:
+              type: string
+        message:
+          type: string
+
+    OAuthTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            user:
+              $ref: "#/components/schemas/AuthUserResponse"
+            tokens:
+              type: object
+              properties:
+                accessToken:
+                  type: string
+                refreshToken:
+                  type: string
+
+    HealthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        status:
+          type: string
+        services:
+          type: object
+          properties:
+            api:
+              type: string
+            redis:
+              type: string
+            database:
+              type: string
+        timestamp:
+          type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          type: object

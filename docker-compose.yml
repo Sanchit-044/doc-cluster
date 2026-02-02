@@ -1,58 +1,31 @@
-services: 
+services:
   app:
-    image: doc-cluster-backend:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.prod
-    ports:
-      - "3000:3000"
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
+    image: sanchit044/doc-cluster:latest
+    container_name: doc-cluster-app
+    restart: always
     env_file:
       - .env
     depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - docCluster-network
+      - db
+      - redis
+    ports:
+      - "3000:3000"
+
   db:
     image: postgres:15-alpine
-    ports:
-      - "${POSTGRES_PORT}:5432"
+    container_name: doc-cluster-db
+    restart: always
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    env_file:
-      - .env
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
-      interval: 2s
-      timeout: 1s
-      retries: 5
-    networks:
-      - docCluster-network
-  redis:
-    image: redis:latest
-    container_name: docCluster-server-redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-    networks:
-      - docCluster-network
-volumes:
-  postgres_data:
-  redis_data:
+      - pgdata:/var/lib/postgresql/data
 
-networks:
-  docCluster-network:
+  redis:
+    image: redis:7-alpine
+    container_name: doc-cluster-redis
+    restart: always
+
+volumes:
+  pgdata:

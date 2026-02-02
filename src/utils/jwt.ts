@@ -1,35 +1,45 @@
 import jwt, { Secret, SignOptions } from "jsonwebtoken";
 
-export const generateAccessToken = (payload: any) => {
- if (!process.env.ACCESS_TOKEN_SECRET || !process.env.ACCESS_TOKEN_EXPIRY) {
-    throw new Error("Access token env variables not set");
+const requireEnv = (key: string): string => {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is not set`);
   }
-
-  const accessTokenSecret: Secret = process.env.ACCESS_TOKEN_SECRET!;
-  const accessTokenExpiry: SignOptions = {
-    expiresIn: Number(process.env.ACCESS_TOKEN_EXPIRY),
-  };
-
-  return jwt.sign(
-    payload,
-    accessTokenSecret,
-    accessTokenExpiry
-  );
+  return value;
 };
 
-export const generateRefreshToken = (payload: any) => {
-  if (!process.env.REFRESH_TOKEN_SECRET || !process.env.REFRESH_TOKEN_EXPIRY) {
-    throw new Error("Refresh token env variables not set");
-  }
+export const generateAccessToken = (
+  payload: object
+): string => {
+  const secret: Secret = requireEnv("ACCESS_TOKEN_SECRET");
 
-  const refreshTokenSecret: Secret = process.env.REFRESH_TOKEN_SECRET!;
-  const refreshTokenExpiry: SignOptions = {
-    expiresIn: Number(process.env.REFRESH_TOKEN_EXPIRY),
+  const options: SignOptions = {
+    expiresIn: requireEnv("ACCESS_TOKEN_EXPIRY") as SignOptions["expiresIn"],
   };
 
-  return jwt.sign(
-    payload,
-    refreshTokenSecret,
-    refreshTokenExpiry
-  );
+  return jwt.sign(payload, secret, options);
+};
+
+export const generateRefreshToken = (
+  payload: object
+): string => {
+  const secret: Secret = requireEnv("REFRESH_TOKEN_SECRET");
+
+  const options: SignOptions = {
+    expiresIn: requireEnv("REFRESH_TOKEN_EXPIRY") as SignOptions["expiresIn"],
+  };
+
+  return jwt.sign(payload, secret, options);
+};
+
+export const generateOtpToken = (
+  payload: object
+): string => {
+  const secret: Secret = requireEnv("OTP_SECRET");
+
+  const options: SignOptions = {
+    expiresIn: requireEnv("OTP_EXPIRY") as SignOptions["expiresIn"],
+  };
+
+  return jwt.sign(payload, secret, options);
 };

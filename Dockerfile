@@ -1,0 +1,20 @@
+FROM node:18-bullseye
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY prisma ./prisma
+RUN npx prisma generate
+
+COPY tsconfig.json ./
+COPY src ./src
+
+COPY swagger.yaml ./swagger.yaml
+
+RUN npm run build
+
+EXPOSE 3000
+
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

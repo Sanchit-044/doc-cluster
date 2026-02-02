@@ -1,72 +1,67 @@
-import { Response, NextFunction } from 'express';
-import { CustomOtpRequest } from '../types/customOtpRequest';
-import { CustomError } from '../types/customError';
-import { prisma } from '../config/prisma.config';
+// import { Response, NextFunction } from 'express';
+// import { CustomOtpRequest } from '../types/customOtpRequest';
+// import { CustomError } from '../types/customError';
+// import { prisma } from '../config/prisma';
 
-const loginOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-        let { email } = req.body;
-        
-        if (!email || typeof email !== 'string') {
-            next(new CustomError("Email is required", 400));
-            return;
-        }
-        
-        email = email.trim().toLowerCase();
-        
-        const user = await prisma.user.findUnique({
-            where: { email }
-        });
-        
-        if (!user) {
-            next(new CustomError("User not found", 404));
-            return;
-        }
-        
-        if (!user.isVerified) {
-            next(new CustomError("User not verified. Please verify your email first.", 403));
-            return;
-        }
-        
-        req.type = 'login';
-        next();
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        next(new CustomError("Something went wrong", 500, errorMessage));
-    }
-}
+// export const loginOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
+//     try {
+//         let { email } = req.body;
 
-const registerOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
-    try {
-        let { email } = req.body;
-        
-        if (!email || typeof email !== 'string') {
-            next(new CustomError("Email is required", 400));
-            return;
-        }
-        
-        email = email.trim().toLowerCase();
-        
-        const existingUser = await prisma.user.findUnique({
-            where: { email }
-        });
-        
-        if (existingUser) {
-            if (existingUser.isVerified) {
-                next(new CustomError("Email already registered and verified", 409));
-                return;
-            } else {
-                next(new CustomError("Email already registered but not verified", 409));
-                return;
-            }
-        }
-        
-        req.type = 'register';
-        next();
-    } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-        next(new CustomError("Something went wrong", 500, errorMessage));
-    }
-}
+//         if (!email || typeof email !== "string") {
+//             return next(new CustomError("Email is required", 400));
+//         }
 
-export { loginOtp, registerOtp };
+//         email = email.trim().toLowerCase();
+
+//         const user = await prisma.user.findUnique({
+//             where: { email }
+//         });
+
+//         if (!user) {
+//             return next(new CustomError("User not found", 404));
+//         }
+
+//         if (!user.isVerified) {
+//             return next(new CustomError("User not verified. Please verify your email first.", 403));
+//         }
+
+//         req.type = "login";
+//         next();
+
+//     } catch (error: any) {
+//         console.error("LOGIN OTP ERROR:", error);
+//         next(new CustomError("Something went wrong while processing login OTP", 500, error.message));
+//     }
+// };
+
+
+// export const registerOtp = async (req: CustomOtpRequest, res: Response, next: NextFunction): Promise<void> => {
+//     try {
+//         let { email } = req.body;
+
+//         if (!email || typeof email !== "string") {
+//             return next(new CustomError("Email is required", 400));
+//         }
+
+//         email = email.trim().toLowerCase();
+
+//         const existingUser = await prisma.user.findUnique({
+//             where: { email }
+//         });
+
+//         if (existingUser) {
+//             if (existingUser.isVerified) {
+//                 return next(new CustomError("Email already registered and verified", 409));
+//             } else {
+//                 return next(new CustomError("Email already registered but not verified", 409));
+//             }
+//         }
+
+//         req.type = "register";
+//         next();
+
+//     } catch (error: any) {
+//         console.error("REGISTER OTP ERROR:", error);
+//         next(new CustomError("Something went wrong while processing register OTP", 500, error.message));
+//     }
+// };

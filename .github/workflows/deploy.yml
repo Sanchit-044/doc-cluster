@@ -1,0 +1,78 @@
+on:
+  push:
+    branches:
+      - auth
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build & Push Docker Image
+        run: |
+          IMAGE=${{ secrets.DOCKERHUB_USERNAME }}/doc-backend:latest
+
+          echo "Cleaning previous builder cache..."
+          docker builder prune -a -f || true
+
+          echo "Building image: $IMAGE"
+          docker build -t $IMAGE .
+
+          echo "Pushing image..."
+          docker push $IMAGE
+
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            set -e
+            echo "=== Deployment started @ $(date) ==="
+
+            # Ensure Docker Compose exists
+            if ! docker compose version >/dev/null 2>&1; then
+              echo "Installing Docker Compose plugin..."
+              DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+              mkdir -p $DOCKER_CONFIG/cli-plugins
+              curl -SL https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64 \
+                -o $DOCKER_CONFIG/cli-plugins/docker-compose
+              chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+            fi
+
+            echo "Pulling new backend image..."
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/doc-backend:latest
+
+            echo "Stopping and removing old containers..."
+            docker compose down || true
+            docker stop doc-backend || true
+            docker rm doc-backend || true
+
+            echo "Cleaning unused Docker images and containers..."
+            docker system prune -a -f --volumes || true
+
+            echo "Downloading latest docker-compose.yml..."
+            rm -f docker-compose.yml
+            curl -O https://raw.githubusercontent.com/Sanchit-044/doc-cluster/auth/docker-compose.yml
+
+            echo "Starting updated services..."
+            docker compose up -d --remove-orphans
+
+            echo "=== Deployment completed @ $(date) ==="
